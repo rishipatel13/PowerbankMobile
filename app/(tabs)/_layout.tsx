@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { LayoutGrid, Server, Settings } from 'lucide-react-native';
+import { LayoutGrid, Server, Receipt, Activity, Settings } from 'lucide-react-native';
 
 export default function TabLayout() {
   return (
@@ -29,6 +29,20 @@ export default function TabLayout() {
         options={{
           title: 'Machines',
           tabBarIcon: ({ color, size }) => <Server color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="finance"
+        options={{
+          title: 'Finance',
+          tabBarIcon: ({ color, size }) => <Receipt color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="ops"
+        options={{
+          title: 'Ops',
+          tabBarIcon: ({ color, size }) => <Activity color={color} size={size} />,
         }}
       />
       <Tabs.Screen

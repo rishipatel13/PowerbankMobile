@@ -120,6 +120,7 @@ export default function OpsScreen() {
     const [batteries, setBatteries] = useState<BatteryRow[]>([]);
     const [accidentalMultiCount, setAccidentalMultiCount] = useState(0);
     const [cabinetToName, setCabinetToName] = useState<Map<string, string>>(new Map());
+    const [offlineMachineCount, setOfflineMachineCount] = useState(0);
 
     const fetchData = useCallback(async (isRefresh = false) => {
         if (!isRefresh) setLoading(true);
@@ -133,7 +134,7 @@ export default function OpsScreen() {
                 supabase.from('machine_events').select('*').order('event_timestamp', { ascending: false }).limit(50),
                 supabase.from('batteries').select('*').order('is_healthy', { ascending: true }).order('charge_pct', { ascending: true }),
                 supabase.from('rentals').select('*', { count: 'exact', head: true }).eq('is_accidental_multi', true).is('deleted_at', null),
-                supabase.from('locations').select('name, station_id').not('station_id', 'is', null),
+                supabase.from('locations').select('name, station_id, machine_status').not('station_id', 'is', null),
             ]);
 
             if (logsRes.data) setDowntimeLogs(logsRes.data);
@@ -145,10 +146,13 @@ export default function OpsScreen() {
 
             if (locationsRes.data) {
                 const map = new Map<string, string>();
+                let offlineCount = 0;
                 for (const loc of locationsRes.data) {
                     if (loc.station_id) map.set(loc.station_id, loc.name);
+                    if (loc.machine_status === 'offline') offlineCount++;
                 }
                 setCabinetToName(map);
+                setOfflineMachineCount(offlineCount);
             }
         } catch (err: any) {
             console.error('Error fetching operations data:', err);
@@ -261,8 +265,8 @@ export default function OpsScreen() {
             </View>
             <View style={styles.cardRow}>
                 <View style={styles.summaryCard}>
-                    <WifiOff color={activeDowntime.length > 0 ? '#f87171' : '#34d399'} size={18} />
-                    <Text style={styles.summaryValue}>{activeDowntime.length}</Text>
+                    <WifiOff color={offlineMachineCount > 0 ? '#f87171' : '#34d399'} size={18} />
+                    <Text style={styles.summaryValue}>{offlineMachineCount}</Text>
                     <Text style={styles.summaryLabel}>Machines Down</Text>
                 </View>
                 <View style={styles.summaryCard}>

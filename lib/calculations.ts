@@ -13,9 +13,8 @@ export interface RentalFinancials {
     isLost: boolean;
 }
 
-export function getEffectiveAmount(rental: { amount_captured: number | null; amount_override: number | null }): number {
-    return rental.amount_override ?? rental.amount_captured ?? 0;
-}
+// getEffectiveAmount is now a generated column on the rentals table (effective_amount).
+// See migration: 20260403220000_add_effective_amount_generated_column.sql
 
 export function calculateRentalFinancials(
     amountCaptured: number | null,

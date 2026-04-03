@@ -15,6 +15,16 @@ import type { Database } from '../../lib/database.types';
 
 type Location = Database['public']['Tables']['locations']['Row'];
 
+function formatRelative(dateString: string): string {
+    const diffMs = Date.now() - new Date(dateString).getTime();
+    const diffMins = Math.floor(diffMs / 60000);
+    if (diffMins < 1) return 'just now';
+    if (diffMins < 60) return `${diffMins}m ago`;
+    const diffHrs = Math.floor(diffMins / 60);
+    if (diffHrs < 24) return `${diffHrs}h ago`;
+    return `${Math.floor(diffHrs / 24)}d ago`;
+}
+
 export default function MachinesScreen() {
     const router = useRouter();
     const [locations, setLocations] = useState<Location[]>([]);
@@ -63,7 +73,7 @@ export default function MachinesScreen() {
                     <View
                         style={[
                             styles.statusDot,
-                            { backgroundColor: item.station_id ? '#22c55e' : '#ef4444' },
+                            { backgroundColor: item.machine_status === 'online' ? '#22c55e' : item.machine_status === 'offline' ? '#ef4444' : item.station_id ? '#6b7280' : '#ef4444' },
                         ]}
                     />
                 </View>
@@ -82,6 +92,9 @@ export default function MachinesScreen() {
                             {occupied} / {item.total_slots} occupied
                         </Text>
                     </>
+                )}
+                {item.last_status_update_at && (
+                    <Text style={styles.updatedText}>Updated {formatRelative(item.last_status_update_at)}</Text>
                 )}
             </TouchableOpacity>
         );
@@ -198,6 +211,11 @@ const styles = StyleSheet.create({
         fontSize: 10,
         marginTop: 4,
         textAlign: 'right',
+    },
+    updatedText: {
+        color: '#6b7280',
+        fontSize: 10,
+        marginTop: 6,
     },
     emptyContainer: {
         padding: 40,

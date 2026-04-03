@@ -12,7 +12,7 @@ import {
 } from 'react-native';
 import { Search, Filter, ChevronDown, ChevronUp, Receipt } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
-import { formatCurrency, getEffectiveAmount } from '../../lib/calculations';
+import { formatCurrency } from '../../lib/calculations';
 import type { Database } from '../../lib/database.types';
 
 type Rental = Database['public']['Tables']['rentals']['Row'];
@@ -224,7 +224,7 @@ export default function FinanceScreen() {
     };
 
     const renderItem = useCallback(({ item: rental }: { item: RentalWithBajie }) => {
-        const effectiveAmount = getEffectiveAmount(rental);
+        const effectiveAmount = rental.effective_amount ?? 0;
         const isExpanded = expandedId === rental.id;
         const badge = getTypeBadgeStyle(rental.transaction_type);
         const bajieOrder = rental.bajie_orders?.[0] ?? null;

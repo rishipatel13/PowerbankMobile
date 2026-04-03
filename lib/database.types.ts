@@ -14,6 +14,164 @@ export type Database = {
   }
   public: {
     Tables: {
+      active_rentals: {
+        Row: {
+          bajie_order_id: string | null
+          battery_id: string
+          borrow_time: string
+          cabinet_id: string
+          created_at: string | null
+          id: string
+          slot: number | null
+        }
+        Insert: {
+          bajie_order_id?: string | null
+          battery_id: string
+          borrow_time?: string
+          cabinet_id: string
+          created_at?: string | null
+          id?: string
+          slot?: number | null
+        }
+        Update: {
+          bajie_order_id?: string | null
+          battery_id?: string
+          borrow_time?: string
+          cabinet_id?: string
+          created_at?: string | null
+          id?: string
+          slot?: number | null
+        }
+        Relationships: []
+      }
+      bajie_orders: {
+        Row: {
+          bajie_order_id: string
+          battery_id: string | null
+          borrow_slot: number | null
+          borrow_status: number | null
+          borrow_time: string | null
+          cabinet_id: string
+          created_at: string | null
+          currency: string | null
+          daily_max_price: number | null
+          deposit: number | null
+          device_type: string | null
+          free_minutes: number | null
+          id: string
+          location_name: string | null
+          order_amount: number | null
+          price: number | null
+          price_minute: string | null
+          raw_data: Json | null
+          return_time: string | null
+          stripe_rental_id: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          bajie_order_id: string
+          battery_id?: string | null
+          borrow_slot?: number | null
+          borrow_status?: number | null
+          borrow_time?: string | null
+          cabinet_id: string
+          created_at?: string | null
+          currency?: string | null
+          daily_max_price?: number | null
+          deposit?: number | null
+          device_type?: string | null
+          free_minutes?: number | null
+          id?: string
+          location_name?: string | null
+          order_amount?: number | null
+          price?: number | null
+          price_minute?: string | null
+          raw_data?: Json | null
+          return_time?: string | null
+          stripe_rental_id?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          bajie_order_id?: string
+          battery_id?: string | null
+          borrow_slot?: number | null
+          borrow_status?: number | null
+          borrow_time?: string | null
+          cabinet_id?: string
+          created_at?: string | null
+          currency?: string | null
+          daily_max_price?: number | null
+          deposit?: number | null
+          device_type?: string | null
+          free_minutes?: number | null
+          id?: string
+          location_name?: string | null
+          order_amount?: number | null
+          price?: number | null
+          price_minute?: string | null
+          raw_data?: Json | null
+          return_time?: string | null
+          stripe_rental_id?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "bajie_orders_stripe_rental_id_fkey"
+            columns: ["stripe_rental_id"]
+            isOneToOne: false
+            referencedRelation: "rentals"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      batteries: {
+        Row: {
+          battery_fault_cause: string
+          battery_fault_type: number
+          battery_id: string
+          cabinet_id: string
+          charge_pct: number
+          created_at: string
+          first_seen_at: string
+          is_healthy: boolean
+          last_seen_at: string
+          slot: number
+          slot_fault_cause: string
+          slot_fault_type: number
+          updated_at: string
+        }
+        Insert: {
+          battery_fault_cause?: string
+          battery_fault_type?: number
+          battery_id: string
+          cabinet_id: string
+          charge_pct?: number
+          created_at?: string
+          first_seen_at?: string
+          is_healthy?: boolean
+          last_seen_at?: string
+          slot: number
+          slot_fault_cause?: string
+          slot_fault_type?: number
+          updated_at?: string
+        }
+        Update: {
+          battery_fault_cause?: string
+          battery_fault_type?: number
+          battery_id?: string
+          cabinet_id?: string
+          charge_pct?: number
+          created_at?: string
+          first_seen_at?: string
+          is_healthy?: boolean
+          last_seen_at?: string
+          slot?: number
+          slot_fault_cause?: string
+          slot_fault_type?: number
+          updated_at?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           created_at: string
@@ -64,6 +222,30 @@ export type Database = {
           },
         ]
       }
+      daily_briefs: {
+        Row: {
+          created_at: string | null
+          date: string
+          generated_at: string | null
+          id: string
+          sections: Json
+        }
+        Insert: {
+          created_at?: string | null
+          date: string
+          generated_at?: string | null
+          id?: string
+          sections?: Json
+        }
+        Update: {
+          created_at?: string | null
+          date?: string
+          generated_at?: string | null
+          id?: string
+          sections?: Json
+        }
+        Relationships: []
+      }
       dc_liquor_licenses: {
         Row: {
           address: string | null
@@ -109,6 +291,63 @@ export type Database = {
           trade_name?: string
           updated_at?: string
           zip?: string | null
+        }
+        Relationships: []
+      }
+      downtime_logs: {
+        Row: {
+          created_at: string | null
+          id: string
+          location_name: string | null
+          logged_at: string
+          offline_times_7d: number
+          station_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          location_name?: string | null
+          logged_at?: string
+          offline_times_7d?: number
+          station_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          location_name?: string | null
+          logged_at?: string
+          offline_times_7d?: number
+          station_id?: string
+        }
+        Relationships: []
+      }
+      downtime_periods: {
+        Row: {
+          created_at: string | null
+          duration_minutes: number | null
+          id: string
+          location_name: string | null
+          offline_at: string
+          online_at: string | null
+          station_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          location_name?: string | null
+          offline_at: string
+          online_at?: string | null
+          station_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          location_name?: string | null
+          offline_at?: string
+          online_at?: string | null
+          station_id?: string
         }
         Relationships: []
       }
@@ -174,8 +413,12 @@ export type Database = {
           go_live_date: string | null
           hourly_rate: number | null
           investment_cost: number
+          last_status_update_at: string | null
           lost_fee: number | null
+          machine_status: string | null
           name: string
+          pos_sn: string | null
+          pos_status: string | null
           postal_code: string | null
           state: string
           station_id: string | null
@@ -196,8 +439,12 @@ export type Database = {
           go_live_date?: string | null
           hourly_rate?: number | null
           investment_cost?: number
+          last_status_update_at?: string | null
           lost_fee?: number | null
+          machine_status?: string | null
           name: string
+          pos_sn?: string | null
+          pos_status?: string | null
           postal_code?: string | null
           state?: string
           station_id?: string | null
@@ -218,8 +465,12 @@ export type Database = {
           go_live_date?: string | null
           hourly_rate?: number | null
           investment_cost?: number
+          last_status_update_at?: string | null
           lost_fee?: number | null
+          machine_status?: string | null
           name?: string
+          pos_sn?: string | null
+          pos_status?: string | null
           postal_code?: string | null
           state?: string
           station_id?: string | null
@@ -228,6 +479,33 @@ export type Database = {
           total_slots?: number | null
           updated_at?: string
           venue_split?: number
+        }
+        Relationships: []
+      }
+      machine_events: {
+        Row: {
+          cabinet_id: string | null
+          created_at: string | null
+          event_data: Json | null
+          event_timestamp: string | null
+          event_type: string
+          id: string
+        }
+        Insert: {
+          cabinet_id?: string | null
+          created_at?: string | null
+          event_data?: Json | null
+          event_timestamp?: string | null
+          event_type: string
+          id?: string
+        }
+        Update: {
+          cabinet_id?: string | null
+          created_at?: string | null
+          event_data?: Json | null
+          event_timestamp?: string | null
+          event_type?: string
+          id?: string
         }
         Relationships: []
       }
@@ -424,6 +702,33 @@ export type Database = {
           },
         ]
       }
+      products: {
+        Row: {
+          aliases: string[] | null
+          category: string | null
+          created_at: string | null
+          id: string
+          is_taxable: boolean | null
+          name: string
+        }
+        Insert: {
+          aliases?: string[] | null
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_taxable?: boolean | null
+          name: string
+        }
+        Update: {
+          aliases?: string[] | null
+          category?: string | null
+          created_at?: string | null
+          id?: string
+          is_taxable?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
       prospects: {
         Row: {
           address: string | null
@@ -502,22 +807,114 @@ export type Database = {
         }
         Relationships: []
       }
+      purchase_order_items: {
+        Row: {
+          created_at: string | null
+          id: string
+          product_id: string
+          purchase_order_id: string
+          quantity: number
+          remaining_quantity: number
+          unit_cost: number
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          product_id: string
+          purchase_order_id: string
+          quantity: number
+          remaining_quantity: number
+          unit_cost: number
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          product_id?: string
+          purchase_order_id?: string
+          quantity?: number
+          remaining_quantity?: number
+          unit_cost?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_order_items_product_id_fkey"
+            columns: ["product_id"]
+            isOneToOne: false
+            referencedRelation: "products"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "purchase_order_items_purchase_order_id_fkey"
+            columns: ["purchase_order_id"]
+            isOneToOne: false
+            referencedRelation: "purchase_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      purchase_orders: {
+        Row: {
+          created_at: string | null
+          id: string
+          invoice_number: string | null
+          notes: string | null
+          order_date: string
+          payment_method: string | null
+          shipping_cost: number | null
+          vendor_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          order_date: string
+          payment_method?: string | null
+          shipping_cost?: number | null
+          vendor_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          invoice_number?: string | null
+          notes?: string | null
+          order_date?: string
+          payment_method?: string | null
+          shipping_cost?: number | null
+          vendor_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "purchase_orders_vendor_id_fkey"
+            columns: ["vendor_id"]
+            isOneToOne: false
+            referencedRelation: "vendors"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       rentals: {
         Row: {
           amount_authorized: number | null
           amount_captured: number | null
           amount_override: number | null
+          amount_refunded: number | null
           card_brand: string | null
           card_last4: string | null
           created_at: string
           currency: string | null
           daily_cap_snapshot: number | null
           deleted_at: string | null
+          disputed: boolean | null
+          effective_amount: number | null
           failure_code: string | null
           failure_message: string | null
           hourly_rate_snapshot: number | null
           id: string
+          is_accidental_multi: boolean
+          is_damaged: boolean
           is_lost: boolean
+          is_refunded: boolean | null
           location_name: string | null
           lost_fee_snapshot: number | null
           my_profit: number | null
@@ -527,6 +924,7 @@ export type Database = {
           sales_tax: number | null
           station_id: string | null
           status: string | null
+          transaction_type: string
           venue_payout: number | null
           wallet_type: string | null
         }
@@ -534,17 +932,23 @@ export type Database = {
           amount_authorized?: number | null
           amount_captured?: number | null
           amount_override?: number | null
+          amount_refunded?: number | null
           card_brand?: string | null
           card_last4?: string | null
           created_at: string
           currency?: string | null
           daily_cap_snapshot?: number | null
           deleted_at?: string | null
+          disputed?: boolean | null
+          effective_amount?: number | null
           failure_code?: string | null
           failure_message?: string | null
           hourly_rate_snapshot?: number | null
           id: string
+          is_accidental_multi?: boolean
+          is_damaged?: boolean
           is_lost?: boolean
+          is_refunded?: boolean | null
           location_name?: string | null
           lost_fee_snapshot?: number | null
           my_profit?: number | null
@@ -554,6 +958,7 @@ export type Database = {
           sales_tax?: number | null
           station_id?: string | null
           status?: string | null
+          transaction_type?: string
           venue_payout?: number | null
           wallet_type?: string | null
         }
@@ -561,17 +966,23 @@ export type Database = {
           amount_authorized?: number | null
           amount_captured?: number | null
           amount_override?: number | null
+          amount_refunded?: number | null
           card_brand?: string | null
           card_last4?: string | null
           created_at?: string
           currency?: string | null
           daily_cap_snapshot?: number | null
           deleted_at?: string | null
+          disputed?: boolean | null
+          effective_amount?: number | null
           failure_code?: string | null
           failure_message?: string | null
           hourly_rate_snapshot?: number | null
           id?: string
+          is_accidental_multi?: boolean
+          is_damaged?: boolean
           is_lost?: boolean
+          is_refunded?: boolean | null
           location_name?: string | null
           lost_fee_snapshot?: number | null
           my_profit?: number | null
@@ -581,6 +992,7 @@ export type Database = {
           sales_tax?: number | null
           station_id?: string | null
           status?: string | null
+          transaction_type?: string
           venue_payout?: number | null
           wallet_type?: string | null
         }
@@ -612,6 +1024,45 @@ export type Database = {
           id?: string
           rate?: number
           start_date?: string
+        }
+        Relationships: []
+      }
+      vendors: {
+        Row: {
+          account_number: string | null
+          contact_name: string | null
+          created_at: string | null
+          email: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+          notes: string | null
+          phone: string | null
+          website: string | null
+        }
+        Insert: {
+          account_number?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+          notes?: string | null
+          phone?: string | null
+          website?: string | null
+        }
+        Update: {
+          account_number?: string | null
+          contact_name?: string | null
+          created_at?: string | null
+          email?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+          notes?: string | null
+          phone?: string | null
+          website?: string | null
         }
         Relationships: []
       }
@@ -887,7 +1338,30 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      latest_inventory_view: {
+        Row: {
+          id: string | null
+          location_id: string | null
+          machine_id: string | null
+          product_id: string | null
+          product_image: string | null
+          product_name: string | null
+          slot_id: string | null
+          snapshot_at: string | null
+          stock_count: number | null
+          unit_price: number | null
+          venue_name: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "inventory_snapshots_location_id_fkey"
+            columns: ["location_id"]
+            isOneToOne: false
+            referencedRelation: "nicbox_locations"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
     }
     Functions: {
       bulk_update_orders: {
@@ -899,6 +1373,70 @@ export type Database = {
         Returns: undefined
       }
       bulk_upsert_orders: { Args: { orders: Json }; Returns: number }
+      get_dashboard_metrics: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          out_my_profit: number
+          out_total_processing_fees: number
+          out_total_revenue: number
+          out_venue_payout: number
+        }[]
+      }
+      get_dashboard_venue_stats: {
+        Args: { p_end_date?: string; p_start_date?: string }
+        Returns: {
+          location_id: string
+          orders_count: number
+          revenue: number
+          venue_name: string
+        }[]
+      }
+      get_excise_tax_stats: {
+        Args: never
+        Returns: {
+          quarter: number
+          total_excise_tax: number
+          total_sales: number
+          year: number
+        }[]
+      }
+      get_stock_overview: {
+        Args: never
+        Returns: {
+          avg_cost: number
+          category: string
+          is_taxable: boolean
+          product_id: string
+          product_name: string
+          total_purchased: number
+          total_remaining: number
+          total_sold: number
+        }[]
+      }
+      get_transaction_stats: {
+        Args: {
+          p_end_date?: string
+          p_filter_status?: string
+          p_search?: string
+          p_start_date?: string
+          p_venue_id?: string
+        }
+        Returns: {
+          out_net_revenue: number
+          out_total_orders: number
+          out_total_processing_fees: number
+          out_total_revenue: number
+          out_total_venue_payouts: number
+        }[]
+      }
+      get_unmatched_product_names: {
+        Args: never
+        Returns: {
+          occurrence_count: number
+          product_name: string
+        }[]
+      }
+      resolve_product_id: { Args: { p_product_name: string }; Returns: string }
       venue_payout_rounded_up: { Args: { payout: number }; Returns: number }
     }
     Enums: {

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback, useMemo } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -10,27 +10,38 @@ import {
   Modal,
   TextInput,
   Platform,
+  Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { MapPin, DollarSign, TrendingUp, Calendar, X } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
-import {
-  calculateRentalFinancials,
-  getEffectiveAmount,
-  formatCurrency,
-  formatPercentage,
-} from '../../lib/calculations';
+import { formatCurrency, formatPercentage } from '../../lib/calculations';
 import {
   FilterPeriod,
   DateRange,
   getDateRangeForPeriod,
-  isDateInRange,
+  toISORange,
+  getWeekBoundaries,
   getPeriodLabel,
 } from '../../lib/dateFilters';
 import type { Database } from '../../lib/database.types';
 
 type Location = Database['public']['Tables']['locations']['Row'];
-type Rental = Database['public']['Tables']['rentals']['Row'];
+
+interface LocationStats {
+  name: string;
+  totalRevenue: number;
+  venuePayout: number;
+  myProfit: number;
+  roi: number;
+  totalRentals: number;
+  averageRevenuePerRental: number;
+  revenueAfterFees: number;
+  salesTax: number;
+  distributable: number;
+  projectedAnnualProfit: number;
+  projectedAnnualTotal: number;
+}
 
 const FILTER_OPTIONS: { key: FilterPeriod; label: string }[] = [
   { key: 'all', label: 'All Time' },
@@ -45,9 +56,10 @@ const FILTER_OPTIONS: { key: FilterPeriod; label: string }[] = [
 export default function DashboardScreen() {
   const router = useRouter();
   const [locations, setLocations] = useState<Location[]>([]);
-  const [rentals, setRentals] = useState<Rental[]>([]);
+  const [stats, setStats] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   // Filter state
   const [selectedPeriod, setSelectedPeriod] = useState<FilterPeriod>('all');
@@ -59,125 +71,86 @@ export default function DashboardScreen() {
   const [tempStart, setTempStart] = useState('');
   const [tempEnd, setTempEnd] = useState('');
 
-  const fetchData = useCallback(async () => {
+  const fetchData = useCallback(async (isRefresh = false) => {
+    if (!isRefresh) setLoading(true);
+    setError(null);
+
     try {
-      const [locationsRes, rentalsRes] = await Promise.all([
+      const resolved = getDateRangeForPeriod(selectedPeriod, customRange);
+      const iso = resolved ? toISORange(resolved) : null;
+      const weekBounds = getWeekBoundaries();
+
+      const [locationsRes, statsRes] = await Promise.all([
         supabase.from('locations').select('*').order('name'),
-        supabase.from('rentals').select('*').is('deleted_at', null).order('created_at', { ascending: false }),
+        supabase.functions.invoke('dashboard-stats', {
+          body: {
+            time_period: iso ? 'custom' : 'all',
+            ...(iso ? { start_date: iso.startISO, end_date: iso.endISO } : {}),
+            this_week_start: weekBounds.thisWeekStartISO,
+            last_week_start: weekBounds.lastWeekStartISO,
+          },
+        }),
       ]);
 
       if (locationsRes.error) throw locationsRes.error;
-      if (rentalsRes.error) throw rentalsRes.error;
+      if (statsRes.error) throw new Error(String(statsRes.error));
 
       setLocations(locationsRes.data);
-      setRentals(rentalsRes.data);
-    } catch (error) {
-      console.error('Error fetching data:', error);
+      setStats(statsRes.data);
+    } catch (err: any) {
+      console.error('Error fetching data:', err);
+      setError(err?.message || 'Failed to load dashboard');
     } finally {
       setLoading(false);
       setRefreshing(false);
     }
-  }, []);
+  }, [selectedPeriod, customRange]);
 
   const onRefresh = useCallback(() => {
     setRefreshing(true);
-    fetchData();
+    fetchData(true);
   }, [fetchData]);
+
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     fetchData();
 
+    const debouncedRefresh = () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      debounceRef.current = setTimeout(() => fetchData(true), 500);
+    };
+
     const channel = supabase
       .channel('db-changes-mobile')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'rentals' }, () => fetchData())
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'locations' }, () => fetchData())
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'rentals' }, debouncedRefresh)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'locations' }, debouncedRefresh)
       .subscribe();
 
     return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
       supabase.removeChannel(channel);
     };
   }, [fetchData]);
 
-  // Get date range for current filter
-  const dateRange = useMemo(() => {
-    return getDateRangeForPeriod(selectedPeriod, customRange);
-  }, [selectedPeriod, customRange]);
+  // Extract stats from edge function response
+  const activeLocations = stats?.global?.activeLocations ?? 0;
+  const totalProfit = stats?.global?.totalProfit ?? 0;
+  const totalRevenue = (stats?.locations ?? []).reduce(
+    (sum: number, s: LocationStats) => sum + s.totalRevenue, 0
+  );
+  const totalRentals = (stats?.locations ?? []).reduce((sum: number, s: LocationStats) => sum + s.totalRentals, 0);
+  const projectedAnnualProfit = stats?.global?.projectedAnnualProfit ?? 0;
+  const projectedAnnualTotal = stats?.global?.projectedAnnualTotal ?? 0;
+  const globalROI = stats?.global?.globalROI ?? 0;
+  const thisWeekProfit = stats?.global?.thisWeekProfit ?? 0;
+  const lastWeekProfit = stats?.global?.lastWeekProfit ?? 0;
 
-  // Filter rentals by date
-  const filteredRentals = useMemo(() => {
-    if (!dateRange) return rentals;
-    return rentals.filter((r) => isDateInRange(r.created_at, dateRange));
-  }, [rentals, dateRange]);
-
-  // Memoize all expensive financial calculations
-  const stats = useMemo(() => {
-    let totalProfit = 0;
-    let totalRevenue = 0;
-    let totalInvestment = 0;
-    let projectedAnnualProfit = 0;
-    let projectedAnnualTotal = 0;
-
-    const locationStats = locations.map((location) => {
-      const locationRentals = filteredRentals.filter(
-        (r) => r.location_name === location.name && getEffectiveAmount(r) > 0
-      );
-      let locProfit = 0;
-      let locVenuePayout = 0;
-      let locRevenue = 0;
-
-      locationRentals.forEach((rental) => {
-        const financials = calculateRentalFinancials(getEffectiveAmount(rental), location, {
-          isLost: rental.is_lost,
-          dailyCapSnapshot: rental.daily_cap_snapshot,
-        });
-        locProfit += financials.myProfit;
-        locVenuePayout += financials.venueCut;
-        locRevenue += financials.gross;
-      });
-
-      totalProfit += locProfit;
-      totalRevenue += locRevenue;
-      totalInvestment += location.investment_cost / 100;
-
-      const avg = locationRentals.length > 0 ? locRevenue / locationRentals.length : 0;
-      const roi = location.investment_cost > 0 ? locProfit / (location.investment_cost / 100) : 0;
-
-      let projected = 0;
-      if (location.go_live_date) {
-        const goLive = new Date(location.go_live_date + 'T00:00:00');
-        const now = new Date();
-        const daysLive = Math.max(1, Math.floor((now.getTime() - goLive.getTime()) / (1000 * 60 * 60 * 24)));
-        const dailyProfit = locProfit / daysLive;
-        const dailyTotal = (locProfit + locVenuePayout) / daysLive;
-        projectedAnnualProfit += dailyProfit * 365;
-        projectedAnnualTotal += dailyTotal * 365;
-        projected = dailyProfit * 365;
-      }
-
-      return {
-        location,
-        rentals: locationRentals.length,
-        revenue: locRevenue,
-        avg,
-        profit: locProfit,
-        roi,
-        projected,
-      };
-    });
-
-    const globalROI = totalInvestment > 0 ? totalProfit / totalInvestment : 0;
-
-    return {
-      activeLocations: locations.length,
-      totalProfit,
-      totalRevenue,
-      totalRentals: filteredRentals.filter((r) => getEffectiveAmount(r) > 0).length,
-      projectedAnnualProfit,
-      projectedAnnualTotal,
-      globalROI,
-      locationStats,
-    };
-  }, [locations, filteredRentals]);
+  // Build location stats lookup
+  const locationStatsMap = new Map<string, LocationStats>();
+  if (stats?.locations) {
+    stats.locations.forEach((loc: LocationStats) => locationStatsMap.set(loc.name, loc));
+  }
 
   const handlePeriodSelect = useCallback((period: FilterPeriod) => {
     if (period === 'custom') {
@@ -190,6 +163,19 @@ export default function DashboardScreen() {
   }, [customRange]);
 
   const handleCustomApply = useCallback(() => {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+    if (!dateRegex.test(tempStart) || !dateRegex.test(tempEnd)) {
+      Alert.alert('Invalid Date', 'Please enter dates in YYYY-MM-DD format.');
+      return;
+    }
+    if (isNaN(new Date(tempStart).getTime()) || isNaN(new Date(tempEnd).getTime())) {
+      Alert.alert('Invalid Date', 'Please enter dates in YYYY-MM-DD format.');
+      return;
+    }
+    if (new Date(tempStart) > new Date(tempEnd)) {
+      Alert.alert('Invalid Date', 'Start date must be before or equal to end date.');
+      return;
+    }
     setCustomRange({ startDate: tempStart, endDate: tempEnd });
     setSelectedPeriod('custom');
     setShowCustomModal(false);
@@ -200,6 +186,20 @@ export default function DashboardScreen() {
       <View style={styles.loadingContainer}>
         <ActivityIndicator size="large" color="#60a5fa" />
         <Text style={styles.loadingText}>Loading dashboard...</Text>
+      </View>
+    );
+  }
+
+  if (error && !loading) {
+    return (
+      <View style={styles.loadingContainer}>
+        <View style={styles.errorCard}>
+          <Text style={styles.errorTitle}>Something went wrong</Text>
+          <Text style={styles.errorMessage}>{error}</Text>
+          <TouchableOpacity style={styles.retryBtn} onPress={() => fetchData()} activeOpacity={0.7}>
+            <Text style={styles.retryBtnText}>Retry</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     );
   }
@@ -256,8 +256,8 @@ export default function DashboardScreen() {
             <Text style={styles.cardLabel}>Active Locations</Text>
             <MapPin color="#60a5fa" size={18} />
           </View>
-          <Text style={styles.cardValue}>{stats.activeLocations}</Text>
-          <Text style={styles.cardSub}>{stats.totalRentals} rentals</Text>
+          <Text style={styles.cardValue}>{activeLocations}</Text>
+          <Text style={styles.cardSub}>{totalRentals} rentals</Text>
         </View>
 
         <View style={styles.statCard}>
@@ -265,8 +265,8 @@ export default function DashboardScreen() {
             <Text style={styles.cardLabel}>Total Profit</Text>
             <DollarSign color="#34d399" size={18} />
           </View>
-          <Text style={styles.cardValue}>{formatCurrency(stats.totalProfit)}</Text>
-          <Text style={styles.cardSub}>Rev: {formatCurrency(stats.totalRevenue)}</Text>
+          <Text style={styles.cardValue}>{formatCurrency(totalProfit)}</Text>
+          <Text style={styles.cardSub}>Rev: {formatCurrency(totalRevenue)}</Text>
         </View>
       </View>
 
@@ -276,9 +276,9 @@ export default function DashboardScreen() {
             <Text style={styles.cardLabel}>Projected</Text>
             <Calendar color="#a78bfa" size={18} />
           </View>
-          <Text style={styles.cardValue}>{formatCurrency(stats.projectedAnnualProfit)}</Text>
+          <Text style={styles.cardValue}>{formatCurrency(projectedAnnualProfit)}</Text>
           <Text style={styles.cardSub}>
-            Total est. <Text style={{ color: '#fff' }}>{formatCurrency(stats.projectedAnnualTotal)}</Text>
+            Total est. <Text style={{ color: '#fff' }}>{formatCurrency(projectedAnnualTotal)}</Text>
           </Text>
         </View>
 
@@ -287,68 +287,90 @@ export default function DashboardScreen() {
             <Text style={styles.cardLabel}>Global ROI</Text>
             <TrendingUp color="#fbbf24" size={18} />
           </View>
-          <Text style={styles.cardValue}>{formatPercentage(stats.globalROI)}</Text>
+          <Text style={styles.cardValue}>{formatPercentage(globalROI)}</Text>
           <Text style={styles.cardSub}>All-time performance</Text>
         </View>
       </View>
 
+      {/* Weekly Profit */}
+      {(thisWeekProfit > 0 || lastWeekProfit > 0) && (
+        <View style={[styles.statCard, { marginBottom: 12 }]}>
+          <View style={styles.cardHeader}>
+            <Text style={styles.cardLabel}>Weekly Profit</Text>
+            <TrendingUp color="#60a5fa" size={18} />
+          </View>
+          <Text style={styles.cardValue}>{formatCurrency(thisWeekProfit)}</Text>
+          <Text style={styles.cardSub}>Last week: {formatCurrency(lastWeekProfit)}</Text>
+        </View>
+      )}
+
       {/* Venue Tiles */}
       <Text style={styles.sectionTitle}>Locations</Text>
-      {stats.locationStats.map(({ location, rentals: rentalCount, revenue, avg, profit, roi, projected }) => (
-        <TouchableOpacity
-          key={location.name}
-          style={styles.venueCard}
-          activeOpacity={0.7}
-          onPress={() => router.push({ pathname: '/venue-detail', params: { name: location.name } })}
-        >
-          <View style={styles.venueBody}>
-            {/* Left side */}
-            <View style={styles.venueLeftCol}>
-              <View style={styles.venueNameRow}>
-                <View style={[styles.venueStatusDot, { backgroundColor: location.station_id ? '#22c55e' : '#ef4444' }]} />
-                <Text style={styles.venueNameText} numberOfLines={2}>{location.name}</Text>
+      {locations.map((location) => {
+        const locStats = locationStatsMap.get(location.name);
+        const rentalCount = locStats?.totalRentals ?? 0;
+        const revenue = locStats?.totalRevenue ?? 0;
+        const avg = locStats?.averageRevenuePerRental ?? 0;
+        const profit = locStats?.myProfit ?? 0;
+        const roi = locStats?.roi ?? 0;
+        const projected = locStats?.projectedAnnualProfit ?? 0;
+
+        return (
+          <TouchableOpacity
+            key={location.name}
+            style={styles.venueCard}
+            activeOpacity={0.7}
+            onPress={() => router.push({ pathname: '/venue-detail', params: { name: location.name } })}
+          >
+            <View style={styles.venueBody}>
+              {/* Left side */}
+              <View style={styles.venueLeftCol}>
+                <View style={styles.venueNameRow}>
+                  <View style={[styles.venueStatusDot, { backgroundColor: location.machine_status === 'online' ? '#22c55e' : location.machine_status === 'offline' ? '#ef4444' : location.station_id ? '#6b7280' : '#ef4444' }]} />
+                  <Text style={styles.venueNameText} numberOfLines={2}>{location.name}</Text>
+                </View>
+                <Text style={styles.venueLocation} numberOfLines={1}>
+                  {location.city ? `${location.city}, ${location.state}` : location.state}
+                </Text>
+                <Text style={styles.venueSplit}>
+                  {formatPercentage(location.venue_split)} split
+                </Text>
               </View>
-              <Text style={styles.venueLocation} numberOfLines={1}>
-                {location.city ? `${location.city}, ${location.state}` : location.state}
-              </Text>
-              <Text style={styles.venueSplit}>
-                {(location.venue_split * 100).toFixed(0)}% split
-              </Text>
+              {/* Right side */}
+              <View style={styles.venueRightCol}>
+                <View style={styles.venueStatsRow}>
+                  <View style={styles.venueStatCell}>
+                    <Text style={styles.venueStatLabel}>Rentals</Text>
+                    <Text style={styles.venueStatValue}>{rentalCount}</Text>
+                  </View>
+                  <View style={styles.venueStatCell}>
+                    <Text style={styles.venueStatLabel}>Revenue</Text>
+                    <Text style={styles.venueStatValue}>{formatCurrency(revenue)}</Text>
+                  </View>
+                  <View style={styles.venueStatCell}>
+                    <Text style={styles.venueStatLabel}>Avg</Text>
+                    <Text style={styles.venueStatValue}>{formatCurrency(avg)}</Text>
+                  </View>
+                </View>
+                <View style={styles.venueStatsRow}>
+                  <View style={styles.venueStatCell}>
+                    <Text style={styles.venueStatLabel}>Profit</Text>
+                    <Text style={[styles.venueStatValue, { color: '#34d399' }]}>{formatCurrency(profit)}</Text>
+                  </View>
+                  <View style={styles.venueStatCell}>
+                    <Text style={styles.venueStatLabel}>ROI</Text>
+                    <Text style={[styles.venueStatValue, { color: '#fbbf24' }]}>{formatPercentage(roi)}</Text>
+                  </View>
+                  <View style={styles.venueStatCell}>
+                    <Text style={styles.venueStatLabel}>Projected</Text>
+                    <Text style={[styles.venueStatValue, { color: '#a78bfa' }]}>{formatCurrency(projected)}</Text>
+                  </View>
+                </View>
+              </View>
             </View>
-            {/* Right side */}
-            <View style={styles.venueRightCol}>
-              <View style={styles.venueStatsRow}>
-                <View style={styles.venueStatCell}>
-                  <Text style={styles.venueStatLabel}>Rentals</Text>
-                  <Text style={styles.venueStatValue}>{rentalCount}</Text>
-                </View>
-                <View style={styles.venueStatCell}>
-                  <Text style={styles.venueStatLabel}>Revenue</Text>
-                  <Text style={styles.venueStatValue}>{formatCurrency(revenue)}</Text>
-                </View>
-                <View style={styles.venueStatCell}>
-                  <Text style={styles.venueStatLabel}>Avg</Text>
-                  <Text style={styles.venueStatValue}>{formatCurrency(avg)}</Text>
-                </View>
-              </View>
-              <View style={styles.venueStatsRow}>
-                <View style={styles.venueStatCell}>
-                  <Text style={styles.venueStatLabel}>Profit</Text>
-                  <Text style={[styles.venueStatValue, { color: '#34d399' }]}>{formatCurrency(profit)}</Text>
-                </View>
-                <View style={styles.venueStatCell}>
-                  <Text style={styles.venueStatLabel}>ROI</Text>
-                  <Text style={[styles.venueStatValue, { color: '#fbbf24' }]}>{formatPercentage(roi)}</Text>
-                </View>
-                <View style={styles.venueStatCell}>
-                  <Text style={styles.venueStatLabel}>Projected</Text>
-                  <Text style={[styles.venueStatValue, { color: '#a78bfa' }]}>{formatCurrency(projected)}</Text>
-                </View>
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
-      ))}
+          </TouchableOpacity>
+        );
+      })}
 
       {/* Custom Date Range Modal */}
       <Modal visible={showCustomModal} transparent animationType="fade">
@@ -424,6 +446,27 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 14,
   },
+  errorCard: {
+    backgroundColor: 'rgba(239,68,68,0.08)',
+    borderWidth: 1,
+    borderColor: 'rgba(239,68,68,0.2)',
+    borderRadius: 16,
+    padding: 28,
+    alignItems: 'center' as const,
+    gap: 10,
+  },
+  errorTitle: { color: '#f87171', fontSize: 18, fontWeight: '700' as const },
+  errorMessage: { color: '#9ca3af', fontSize: 13, textAlign: 'center' as const },
+  retryBtn: {
+    marginTop: 10,
+    paddingHorizontal: 24,
+    paddingVertical: 10,
+    backgroundColor: '#1f2937',
+    borderWidth: 1,
+    borderColor: '#374151',
+    borderRadius: 10,
+  },
+  retryBtnText: { color: '#fff', fontSize: 13, fontWeight: '600' as const },
 
   // Filter Pills
   filterScroll: {
