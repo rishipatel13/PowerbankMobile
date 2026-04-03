@@ -119,8 +119,8 @@ export default function FinanceScreen() {
                 query = query.eq('is_accidental_multi', true);
                 countQuery = countQuery.eq('is_accidental_multi', true);
             } else if (typeFilter === 'paid') {
-                query = query.in('transaction_type', ['completed', 'lost', 'refunded', 'partially_refunded', 'disputed']);
-                countQuery = countQuery.in('transaction_type', ['completed', 'lost', 'refunded', 'partially_refunded', 'disputed']);
+                query = query.eq('is_paid', true);
+                countQuery = countQuery.eq('is_paid', true);
             } else if (typeFilter !== 'all') {
                 query = query.eq('transaction_type', typeFilter);
                 countQuery = countQuery.eq('transaction_type', typeFilter);
@@ -211,11 +211,8 @@ export default function FinanceScreen() {
 
     const totalPages = Math.ceil(totalCount / PAGE_SIZE);
 
-    // Bajie timestamps are UTC+8 stored without timezone — subtract 8h for real UTC
-    const bajieToUtc = (ts: string): Date => new Date(new Date(ts).getTime() - 8 * 60 * 60 * 1000);
-
     const formatDuration = (borrowTime: string, returnTime: string): string => {
-        const ms = bajieToUtc(returnTime).getTime() - bajieToUtc(borrowTime).getTime();
+        const ms = new Date(returnTime).getTime() - new Date(borrowTime).getTime();
         const totalMins = Math.round(ms / 60000);
         if (totalMins < 60) return `${totalMins}m`;
         const hrs = Math.floor(totalMins / 60);
