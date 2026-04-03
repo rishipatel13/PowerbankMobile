@@ -42,3 +42,10 @@ app-example
 # generated native folders
 /ios
 /android
+
+# AI tool configs (may contain tokens)
+.claude/
+.gemini/
+.mcp.json
+.remember/
+.superpowers/
