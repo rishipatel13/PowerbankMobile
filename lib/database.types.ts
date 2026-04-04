@@ -294,63 +294,6 @@ export type Database = {
         }
         Relationships: []
       }
-      downtime_logs: {
-        Row: {
-          created_at: string | null
-          id: string
-          location_name: string | null
-          logged_at: string
-          offline_times_7d: number
-          station_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          id?: string
-          location_name?: string | null
-          logged_at?: string
-          offline_times_7d?: number
-          station_id: string
-        }
-        Update: {
-          created_at?: string | null
-          id?: string
-          location_name?: string | null
-          logged_at?: string
-          offline_times_7d?: number
-          station_id?: string
-        }
-        Relationships: []
-      }
-      downtime_periods: {
-        Row: {
-          created_at: string | null
-          duration_minutes: number | null
-          id: string
-          location_name: string | null
-          offline_at: string
-          online_at: string | null
-          station_id: string
-        }
-        Insert: {
-          created_at?: string | null
-          duration_minutes?: number | null
-          id?: string
-          location_name?: string | null
-          offline_at: string
-          online_at?: string | null
-          station_id: string
-        }
-        Update: {
-          created_at?: string | null
-          duration_minutes?: number | null
-          id?: string
-          location_name?: string | null
-          offline_at?: string
-          online_at?: string | null
-          station_id?: string
-        }
-        Relationships: []
-      }
       incidents: {
         Row: {
           created_at: string | null
