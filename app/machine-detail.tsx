@@ -67,9 +67,8 @@ function formatRelative(dateString: string): string {
     return `${Math.floor(diffHrs / 24)}d ago`;
 }
 
-// Bajie timestamps are UTC+8 without timezone — subtract 8h for real UTC
-const bajieToLocal = (ts: string): string =>
-    new Date(new Date(ts).getTime() - 8 * 60 * 60 * 1000).toLocaleDateString('en-US', {
+const formatTimestamp = (ts: string): string =>
+    new Date(ts).toLocaleDateString('en-US', {
         month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit',
     });
 
@@ -525,19 +524,19 @@ export default function MachineDetailScreen() {
                             {selectedRaw?.pRegtime && (
                                 <View style={styles.modalDetailRow}>
                                     <Text style={styles.modalDetailLabel}>Registered</Text>
-                                    <Text style={styles.modalDetailValue}>{bajieToLocal(selectedRaw.pRegtime)}</Text>
+                                    <Text style={styles.modalDetailValue}>{formatTimestamp(selectedRaw.pRegtime)}</Text>
                                 </View>
                             )}
                             {selectedRaw?.pBorrowtime && (
                                 <View style={styles.modalDetailRow}>
                                     <Text style={styles.modalDetailLabel}>Last borrowed</Text>
-                                    <Text style={styles.modalDetailValue}>{bajieToLocal(selectedRaw.pBorrowtime)}</Text>
+                                    <Text style={styles.modalDetailValue}>{formatTimestamp(selectedRaw.pBorrowtime)}</Text>
                                 </View>
                             )}
                             {selectedRaw?.pLogtime && (
                                 <View style={styles.modalDetailRow}>
                                     <Text style={styles.modalDetailLabel}>Last activity</Text>
-                                    <Text style={styles.modalDetailValue}>{bajieToLocal(selectedRaw.pLogtime)}</Text>
+                                    <Text style={styles.modalDetailValue}>{formatTimestamp(selectedRaw.pLogtime)}</Text>
                                 </View>
                             )}
                             {selectedHealth?.last_seen_at && (
