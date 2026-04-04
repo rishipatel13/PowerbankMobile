@@ -351,6 +351,48 @@ export type Database = {
         }
         Relationships: []
       }
+      incidents: {
+        Row: {
+          created_at: string | null
+          duration_minutes: number | null
+          id: string
+          incident_type: string
+          location_name: string | null
+          metadata: Json | null
+          resolve_event_id: string | null
+          resolved_at: string | null
+          source_event_id: string | null
+          started_at: string
+          station_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          incident_type: string
+          location_name?: string | null
+          metadata?: Json | null
+          resolve_event_id?: string | null
+          resolved_at?: string | null
+          source_event_id?: string | null
+          started_at: string
+          station_id: string
+        }
+        Update: {
+          created_at?: string | null
+          duration_minutes?: number | null
+          id?: string
+          incident_type?: string
+          location_name?: string | null
+          metadata?: Json | null
+          resolve_event_id?: string | null
+          resolved_at?: string | null
+          source_event_id?: string | null
+          started_at?: string
+          station_id?: string
+        }
+        Relationships: []
+      }
       inventory_snapshots: {
         Row: {
           id: string
@@ -484,28 +526,40 @@ export type Database = {
       }
       machine_events: {
         Row: {
+          alert_reasons: string[]
           cabinet_id: string | null
           created_at: string | null
           event_data: Json | null
           event_timestamp: string | null
           event_type: string
           id: string
+          is_abnormal: boolean
+          location_name: string | null
+          parsed_summary: string
         }
         Insert: {
+          alert_reasons?: string[]
           cabinet_id?: string | null
           created_at?: string | null
           event_data?: Json | null
           event_timestamp?: string | null
           event_type: string
           id?: string
+          is_abnormal?: boolean
+          location_name?: string | null
+          parsed_summary?: string
         }
         Update: {
+          alert_reasons?: string[]
           cabinet_id?: string | null
           created_at?: string | null
           event_data?: Json | null
           event_timestamp?: string | null
           event_type?: string
           id?: string
+          is_abnormal?: boolean
+          location_name?: string | null
+          parsed_summary?: string
         }
         Relationships: []
       }
@@ -914,6 +968,7 @@ export type Database = {
           is_accidental_multi: boolean
           is_damaged: boolean
           is_lost: boolean
+          is_paid: boolean | null
           is_refunded: boolean | null
           location_name: string | null
           lost_fee_snapshot: number | null
@@ -948,6 +1003,7 @@ export type Database = {
           is_accidental_multi?: boolean
           is_damaged?: boolean
           is_lost?: boolean
+          is_paid?: boolean | null
           is_refunded?: boolean | null
           location_name?: string | null
           lost_fee_snapshot?: number | null
@@ -982,6 +1038,7 @@ export type Database = {
           is_accidental_multi?: boolean
           is_damaged?: boolean
           is_lost?: boolean
+          is_paid?: boolean | null
           is_refunded?: boolean | null
           location_name?: string | null
           lost_fee_snapshot?: number | null
@@ -1570,4 +1627,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
