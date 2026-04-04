@@ -58,6 +58,7 @@ export default function OpsScreen() {
     const [accidentalMultiCount, setAccidentalMultiCount] = useState(0);
     const [cabinetToName, setCabinetToName] = useState<Map<string, string>>(new Map());
     const [offlineMachineCount, setOfflineMachineCount] = useState(0);
+    const [incidentFilter, setIncidentFilter] = useState<'all' | 'cabinet_offline' | 'pos_offline'>('all');
 
     const fetchData = useCallback(async (isRefresh = false) => {
         if (!isRefresh) setLoading(true);
@@ -230,34 +231,95 @@ export default function OpsScreen() {
             )}
 
             {/* Recent Incidents */}
-            {recentIncidents.length > 0 && (
-                <>
-                    <Text style={styles.sectionTitle}>Recent Incidents</Text>
-                    {recentIncidents.map((incident) => (
-                        <View key={incident.id} style={styles.downtimeCard}>
-                            <View style={styles.downtimeHeader}>
-                                {incident.incident_type === 'cabinet_offline' ? (
-                                    <WifiOff color="#6b7280" size={14} />
-                                ) : (
-                                    <CreditCard color="#6b7280" size={14} />
-                                )}
-                                <Text style={styles.downtimeName} numberOfLines={1}>
-                                    {incident.location_name || incident.station_id}
-                                </Text>
-                            </View>
-                            <View style={styles.downtimeInfo}>
-                                <Text style={styles.downtimeLabel}>
-                                    {incident.incident_type === 'cabinet_offline' ? 'Cabinet Offline' : 'POS Offline'}
-                                    {' · '}{formatDuration(incident.duration_minutes)}
-                                </Text>
-                                <Text style={styles.downtimeValue}>
-                                    {formatRelative(incident.started_at)}
-                                </Text>
+            {(() => {
+                const filteredRecent = recentIncidents.filter(i => incidentFilter === 'all' || i.incident_type === incidentFilter);
+                return recentIncidents.length > 0 && (
+                    <>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 10 }}>
+                            <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 0 }]}>Recent Incidents</Text>
+                            <View style={{ flexDirection: 'row', gap: 4 }}>
+                                {(['all', 'cabinet_offline', 'pos_offline'] as const).map((filter) => (
+                                    <TouchableOpacity
+                                        key={filter}
+                                        onPress={() => setIncidentFilter(filter)}
+                                        style={{
+                                            paddingHorizontal: 10,
+                                            paddingVertical: 4,
+                                            borderRadius: 12,
+                                            backgroundColor: incidentFilter === filter ? '#374151' : 'transparent',
+                                        }}
+                                        activeOpacity={0.7}
+                                    >
+                                        <Text style={{
+                                            fontSize: 11,
+                                            fontWeight: '500',
+                                            color: incidentFilter === filter ? '#fff' : '#6b7280',
+                                        }}>
+                                            {filter === 'all' ? 'All' : filter === 'cabinet_offline' ? 'Cabinet' : 'POS'}
+                                        </Text>
+                                    </TouchableOpacity>
+                                ))}
                             </View>
                         </View>
-                    ))}
-                </>
-            )}
+                        {filteredRecent.length === 0 ? (
+                            <View style={styles.emptyCard}>
+                                <Text style={styles.emptyText}>No incidents for this filter</Text>
+                            </View>
+                        ) : filteredRecent.map((incident) => {
+                            const isCabinet = incident.incident_type === 'cabinet_offline';
+                            const startDate = new Date(incident.started_at);
+                            const endDate = incident.resolved_at ? new Date(incident.resolved_at) : null;
+                            const fmtDate = (d: Date) => d.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+                            const fmtTime = (d: Date) => d.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' });
+                            const sameDay = endDate && startDate.toDateString() === endDate.toDateString();
+                            const timeRange = endDate
+                                ? sameDay
+                                    ? `${fmtDate(startDate)}, ${fmtTime(startDate)} → ${fmtTime(endDate)}`
+                                    : `${fmtDate(startDate)}, ${fmtTime(startDate)} → ${fmtDate(endDate)}, ${fmtTime(endDate)}`
+                                : `${fmtDate(startDate)}, ${fmtTime(startDate)}`;
+                            return (
+                                <View key={incident.id} style={[styles.downtimeCard, {
+                                    borderLeftWidth: 3,
+                                    borderLeftColor: isCabinet ? 'rgba(248,113,113,0.4)' : 'rgba(251,191,36,0.4)',
+                                }]}>
+                                    <View style={styles.downtimeHeader}>
+                                        {isCabinet ? (
+                                            <WifiOff color="rgba(248,113,113,0.6)" size={14} />
+                                        ) : (
+                                            <CreditCard color="rgba(251,191,36,0.6)" size={14} />
+                                        )}
+                                        <Text style={styles.downtimeName} numberOfLines={1}>
+                                            {incident.location_name || incident.station_id}
+                                        </Text>
+                                        <View style={{
+                                            backgroundColor: isCabinet ? 'rgba(239,68,68,0.1)' : 'rgba(245,158,11,0.1)',
+                                            paddingHorizontal: 6,
+                                            paddingVertical: 2,
+                                            borderRadius: 4,
+                                        }}>
+                                            <Text style={{
+                                                fontSize: 10,
+                                                fontWeight: '600',
+                                                color: isCabinet ? '#f87171' : '#fbbf24',
+                                            }}>
+                                                {isCabinet ? 'Cabinet' : 'POS'}
+                                            </Text>
+                                        </View>
+                                    </View>
+                                    <View style={styles.downtimeInfo}>
+                                        <Text style={styles.downtimeLabel}>
+                                            {formatDuration(incident.duration_minutes)}
+                                        </Text>
+                                        <Text style={styles.downtimeValue}>
+                                            {timeRange}
+                                        </Text>
+                                    </View>
+                                </View>
+                            );
+                        })}
+                    </>
+                );
+            })()}
 
             {/* Active Rentals (Batteries Out) */}
             {activeRentals.length > 0 && (
