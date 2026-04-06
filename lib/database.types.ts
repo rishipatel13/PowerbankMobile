@@ -702,27 +702,39 @@ export type Database = {
       products: {
         Row: {
           aliases: string[] | null
+          brand: string | null
           category: string | null
           created_at: string | null
+          flavor: string | null
           id: string
           is_taxable: boolean | null
           name: string
+          product_line: string | null
+          puff_count: number | null
         }
         Insert: {
           aliases?: string[] | null
+          brand?: string | null
           category?: string | null
           created_at?: string | null
+          flavor?: string | null
           id?: string
           is_taxable?: boolean | null
           name: string
+          product_line?: string | null
+          puff_count?: number | null
         }
         Update: {
           aliases?: string[] | null
+          brand?: string | null
           category?: string | null
           created_at?: string | null
+          flavor?: string | null
           id?: string
           is_taxable?: boolean | null
           name?: string
+          product_line?: string | null
+          puff_count?: number | null
         }
         Relationships: []
       }
@@ -807,6 +819,7 @@ export type Database = {
       purchase_order_items: {
         Row: {
           created_at: string | null
+          excluded: boolean
           id: string
           product_id: string
           purchase_order_id: string
@@ -816,6 +829,7 @@ export type Database = {
         }
         Insert: {
           created_at?: string | null
+          excluded?: boolean
           id?: string
           product_id: string
           purchase_order_id: string
@@ -825,6 +839,7 @@ export type Database = {
         }
         Update: {
           created_at?: string | null
+          excluded?: boolean
           id?: string
           product_id?: string
           purchase_order_id?: string
@@ -1005,6 +1020,96 @@ export type Database = {
             referencedColumns: ["name"]
           },
         ]
+      }
+      slot_faults: {
+        Row: {
+          cabinet_id: string
+          created_at: string | null
+          detected_at: string
+          fault_cause: string | null
+          fault_type: number
+          id: string
+          last_known_battery_id: string | null
+          likely_present: boolean
+          location_name: string | null
+          resolved_at: string | null
+          slot: number
+          slot_state: number | null
+        }
+        Insert: {
+          cabinet_id: string
+          created_at?: string | null
+          detected_at: string
+          fault_cause?: string | null
+          fault_type: number
+          id?: string
+          last_known_battery_id?: string | null
+          likely_present?: boolean
+          location_name?: string | null
+          resolved_at?: string | null
+          slot: number
+          slot_state?: number | null
+        }
+        Update: {
+          cabinet_id?: string
+          created_at?: string | null
+          detected_at?: string
+          fault_cause?: string | null
+          fault_type?: number
+          id?: string
+          last_known_battery_id?: string | null
+          likely_present?: boolean
+          location_name?: string | null
+          resolved_at?: string | null
+          slot?: number
+          slot_state?: number | null
+        }
+        Relationships: []
+      }
+      stripe_sync_issues: {
+        Row: {
+          created_at: string
+          details: Json
+          id: string
+          issue_type: string
+          location_name: string | null
+          resolution_notes: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          severity: string
+          stripe_location_id: string | null
+          stripe_reader_id: string | null
+          summary: string
+        }
+        Insert: {
+          created_at?: string
+          details?: Json
+          id?: string
+          issue_type: string
+          location_name?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          stripe_location_id?: string | null
+          stripe_reader_id?: string | null
+          summary: string
+        }
+        Update: {
+          created_at?: string
+          details?: Json
+          id?: string
+          issue_type?: string
+          location_name?: string | null
+          resolution_notes?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          severity?: string
+          stripe_location_id?: string | null
+          stripe_reader_id?: string | null
+          summary?: string
+        }
+        Relationships: []
       }
       tax_rates: {
         Row: {
@@ -1570,3 +1675,4 @@ export const Constants = {
     Enums: {},
   },
 } as const
+
