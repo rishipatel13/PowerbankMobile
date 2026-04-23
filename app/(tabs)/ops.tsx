@@ -69,7 +69,7 @@ export default function OpsScreen() {
                 supabase.from('incidents').select('*').is('resolved_at', null).order('started_at', { ascending: false }),
                 supabase.from('incidents').select('*').not('resolved_at', 'is', null).order('started_at', { ascending: false }).limit(20),
                 supabase.from('active_rentals').select('*').order('borrow_time', { ascending: false }),
-                supabase.from('batteries').select('*').order('is_healthy', { ascending: true }).order('charge_pct', { ascending: true }),
+                supabase.from('batteries').select('*').gte('last_seen_at', new Date(Date.now() - 60 * 60 * 1000).toISOString()).order('is_healthy', { ascending: true }).order('charge_pct', { ascending: true }),
                 supabase.from('rentals').select('*', { count: 'exact', head: true }).eq('is_accidental_multi', true).is('deleted_at', null),
                 supabase.from('locations').select('name, station_id, machine_status').not('station_id', 'is', null),
             ]);

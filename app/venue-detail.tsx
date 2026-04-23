@@ -451,7 +451,7 @@ export default function VenueDetailScreen() {
                         ) : (
                             <>
                                 <View style={styles.configRow}><Text style={styles.configLabel}>Station ID</Text><Text style={styles.configValue}>{location.station_id || '—'}</Text></View>
-                                <View style={styles.configRow}><Text style={styles.configLabel}>Stripe Terminal</Text><Text style={styles.configValue} numberOfLines={1}>{location.stripe_terminal_id || '—'}</Text></View>
+                                <View style={styles.configRow}><Text style={styles.configLabel}>Stripe ID</Text><Text style={styles.configValue} numberOfLines={1}>{location.stripe_id || '—'}</Text></View>
                                 <View style={styles.configRow}><Text style={styles.configLabel}>Hourly Rate</Text><Text style={styles.configValue}>{location.hourly_rate ? `$${(location.hourly_rate / 100).toFixed(2)}` : '—'}</Text></View>
                                 <View style={styles.configRow}><Text style={styles.configLabel}>Daily Cap</Text><Text style={styles.configValue}>{location.daily_cap ? `$${(location.daily_cap / 100).toFixed(2)}` : '—'}</Text></View>
                                 <View style={styles.configRow}><Text style={styles.configLabel}>Lost Fee</Text><Text style={styles.configValue}>{location.lost_fee ? `$${(location.lost_fee / 100).toFixed(2)}` : '—'}</Text></View>
