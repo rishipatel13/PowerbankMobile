@@ -560,6 +560,45 @@ export type Database = {
         }
         Relationships: []
       }
+      nicbox_error_logs: {
+        Row: {
+          browser_info: string | null
+          component: string | null
+          component_stack: string | null
+          created_at: string | null
+          error_message: string
+          error_stack: string | null
+          id: string
+          metadata: Json | null
+          severity: string | null
+          user_id: string | null
+        }
+        Insert: {
+          browser_info?: string | null
+          component?: string | null
+          component_stack?: string | null
+          created_at?: string | null
+          error_message: string
+          error_stack?: string | null
+          id?: string
+          metadata?: Json | null
+          severity?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          browser_info?: string | null
+          component?: string | null
+          component_stack?: string | null
+          created_at?: string | null
+          error_message?: string
+          error_stack?: string | null
+          id?: string
+          metadata?: Json | null
+          severity?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
       nicbox_locations: {
         Row: {
           commission_rate: number
@@ -905,6 +944,30 @@ export type Database = {
           },
         ]
       }
+      raw_webhook_events: {
+        Row: {
+          cabinet_id: string | null
+          event_type: string | null
+          id: string
+          raw_payload: Json | null
+          received_at: string | null
+        }
+        Insert: {
+          cabinet_id?: string | null
+          event_type?: string | null
+          id?: string
+          raw_payload?: Json | null
+          received_at?: string | null
+        }
+        Update: {
+          cabinet_id?: string | null
+          event_type?: string | null
+          id?: string
+          raw_payload?: Json | null
+          received_at?: string | null
+        }
+        Relationships: []
+      }
       rentals: {
         Row: {
           amount_authorized: number | null
@@ -934,6 +997,7 @@ export type Database = {
           raw_data: Json | null
           receipt_url: string | null
           rental_hours: number | null
+          returned_at: string | null
           sales_tax: number | null
           station_id: string | null
           status: string | null
@@ -969,6 +1033,7 @@ export type Database = {
           raw_data?: Json | null
           receipt_url?: string | null
           rental_hours?: number | null
+          returned_at?: string | null
           sales_tax?: number | null
           station_id?: string | null
           status?: string | null
@@ -1004,6 +1069,7 @@ export type Database = {
           raw_data?: Json | null
           receipt_url?: string | null
           rental_hours?: number | null
+          returned_at?: string | null
           sales_tax?: number | null
           station_id?: string | null
           status?: string | null
@@ -1500,6 +1566,8 @@ export type Database = {
         Args: never
         Returns: {
           quarter: number
+          tax_rate: number
+          total_cogs: number
           total_excise_tax: number
           total_sales: number
           year: number
@@ -1675,4 +1743,3 @@ export const Constants = {
     Enums: {},
   },
 } as const
-
