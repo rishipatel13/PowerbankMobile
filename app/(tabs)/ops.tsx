@@ -7,14 +7,20 @@ import {
     ActivityIndicator,
     RefreshControl,
     TouchableOpacity,
+    Modal,
+    Pressable,
 } from 'react-native';
-import { CreditCard, Heart, AlertCircle, WifiOff, Zap } from 'lucide-react-native';
+import { CreditCard, Heart, AlertCircle, WifiOff, Zap, AlertTriangle, ChevronDown } from 'lucide-react-native';
 import { supabase } from '../../lib/supabase';
 import type { Database } from '../../lib/database.types';
 
 type Incident = Database['public']['Tables']['incidents']['Row'];
+type MinDurationKey = 'all' | '15m' | '1h' | '2h' | '1d';
+const DURATION_THRESHOLDS: Record<MinDurationKey, number> = { all: 0, '15m': 15, '1h': 60, '2h': 120, '1d': 1440 };
+const DURATION_LABELS: Record<MinDurationKey, string> = { all: 'Any', '15m': '≥15m', '1h': '≥1h', '2h': '≥2h', '1d': '≥1d' };
 type ActiveRental = Database['public']['Tables']['active_rentals']['Row'];
 type BatteryRow = Database['public']['Tables']['batteries']['Row'];
+type SyncIssue = Database['public']['Tables']['stripe_sync_issues']['Row'];
 
 const BATTERY_FAULT_NAMES: Record<number, string> = {
     0: 'Normal', 1: 'False charge', 2: 'Lightning cable fault', 3: 'USB cable fault',
@@ -58,24 +64,34 @@ export default function OpsScreen() {
     const [accidentalMultiCount, setAccidentalMultiCount] = useState(0);
     const [cabinetToName, setCabinetToName] = useState<Map<string, string>>(new Map());
     const [offlineMachineCount, setOfflineMachineCount] = useState(0);
+    const [syncIssues, setSyncIssues] = useState<SyncIssue[]>([]);
     const [incidentFilter, setIncidentFilter] = useState<'all' | 'cabinet_offline' | 'pos_offline'>('all');
+    const [minDurationFilter, setMinDurationFilter] = useState<MinDurationKey>('15m');
+    const [durationMenuOpen, setDurationMenuOpen] = useState(false);
 
     const fetchData = useCallback(async (isRefresh = false) => {
         if (!isRefresh) setLoading(true);
         setError(null);
 
         try {
-            const [activeIncRes, recentIncRes, rentalsRes, batteriesRes, multiRes, locationsRes] = await Promise.all([
+            let recentQ = supabase.from('incidents').select('*').not('resolved_at', 'is', null);
+            if (incidentFilter !== 'all') recentQ = recentQ.eq('incident_type', incidentFilter);
+            const threshold = DURATION_THRESHOLDS[minDurationFilter];
+            if (threshold > 0) recentQ = recentQ.gte('duration_minutes', threshold);
+
+            const [activeIncRes, recentIncRes, rentalsRes, batteriesRes, multiRes, locationsRes, syncRes] = await Promise.all([
                 supabase.from('incidents').select('*').is('resolved_at', null).order('started_at', { ascending: false }),
-                supabase.from('incidents').select('*').not('resolved_at', 'is', null).order('started_at', { ascending: false }).limit(20),
+                recentQ.order('started_at', { ascending: false }).limit(20),
                 supabase.from('active_rentals').select('*').order('borrow_time', { ascending: false }),
                 supabase.from('batteries').select('*').gte('last_seen_at', new Date(Date.now() - 60 * 60 * 1000).toISOString()).order('is_healthy', { ascending: true }).order('charge_pct', { ascending: true }),
                 supabase.from('rentals').select('*', { count: 'exact', head: true }).eq('is_accidental_multi', true).is('deleted_at', null),
                 supabase.from('locations').select('name, station_id, machine_status').not('station_id', 'is', null),
+                supabase.from('stripe_sync_issues').select('*').is('resolved_at', null).order('created_at', { ascending: false }),
             ]);
 
             if (activeIncRes.data) setActiveIncidents(activeIncRes.data);
             if (recentIncRes.data) setRecentIncidents(recentIncRes.data);
+            if (syncRes.data) setSyncIssues(syncRes.data);
             if (rentalsRes.data) setActiveRentals(rentalsRes.data);
             if (batteriesRes.data) setBatteries(batteriesRes.data);
             setAccidentalMultiCount(multiRes.count ?? 0);
@@ -97,7 +113,7 @@ export default function OpsScreen() {
             setLoading(false);
             setRefreshing(false);
         }
-    }, []);
+    }, [incidentFilter, minDurationFilter]);
 
     const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -161,6 +177,7 @@ export default function OpsScreen() {
     };
 
     return (
+        <>
         <ScrollView
             style={styles.container}
             contentContainerStyle={styles.content}
@@ -230,14 +247,46 @@ export default function OpsScreen() {
                 ))
             )}
 
+            {/* Stripe Sync Issues */}
+            {syncIssues.length > 0 && (
+                <>
+                    <Text style={styles.sectionTitle}>
+                        Stripe Issues <Text style={{ color: '#fb923c' }}>({syncIssues.length})</Text>
+                    </Text>
+                    {syncIssues.map((issue) => (
+                        <View
+                            key={issue.id}
+                            style={[
+                                styles.alertCard,
+                                {
+                                    borderLeftColor: issue.severity === 'critical' ? '#fb923c' : '#facc15',
+                                    borderColor: issue.severity === 'critical' ? 'rgba(251,146,60,0.2)' : 'rgba(250,204,21,0.2)',
+                                },
+                            ]}
+                        >
+                            <View style={styles.alertHeader}>
+                                <AlertTriangle color={issue.severity === 'critical' ? '#fb923c' : '#facc15'} size={14} />
+                                <Text style={[styles.alertLocation, { marginLeft: 8 }]} numberOfLines={1}>
+                                    {issue.location_name || 'Stripe Config'}
+                                </Text>
+                                <Text style={styles.alertTime}>{formatRelative(issue.created_at)}</Text>
+                            </View>
+                            <Text style={[styles.alertSummary, { color: issue.severity === 'critical' ? '#fb923c' : '#facc15' }]}>
+                                {issue.summary}
+                            </Text>
+                        </View>
+                    ))}
+                </>
+            )}
+
             {/* Recent Incidents */}
             {(() => {
-                const filteredRecent = recentIncidents.filter(i => incidentFilter === 'all' || i.incident_type === incidentFilter);
+                const filteredRecent = recentIncidents;
                 return recentIncidents.length > 0 && (
                     <>
                         <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', marginTop: 16, marginBottom: 10 }}>
                             <Text style={[styles.sectionTitle, { marginTop: 0, marginBottom: 0 }]}>Recent Incidents</Text>
-                            <View style={{ flexDirection: 'row', gap: 4 }}>
+                            <View style={{ flexDirection: 'row', gap: 4, alignItems: 'center' }}>
                                 {(['all', 'cabinet_offline', 'pos_offline'] as const).map((filter) => (
                                     <TouchableOpacity
                                         key={filter}
@@ -259,6 +308,29 @@ export default function OpsScreen() {
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
+                                <View style={{ width: 1, height: 12, backgroundColor: '#4b5563', marginHorizontal: 2 }} />
+                                <TouchableOpacity
+                                    onPress={() => setDurationMenuOpen(true)}
+                                    style={{
+                                        flexDirection: 'row',
+                                        alignItems: 'center',
+                                        gap: 2,
+                                        paddingHorizontal: 10,
+                                        paddingVertical: 4,
+                                        borderRadius: 12,
+                                        backgroundColor: minDurationFilter !== 'all' ? '#374151' : 'transparent',
+                                    }}
+                                    activeOpacity={0.7}
+                                >
+                                    <Text style={{
+                                        fontSize: 11,
+                                        fontWeight: '500',
+                                        color: minDurationFilter !== 'all' ? '#fff' : '#6b7280',
+                                    }}>
+                                        {DURATION_LABELS[minDurationFilter]}
+                                    </Text>
+                                    <ChevronDown size={10} color={minDurationFilter !== 'all' ? '#fff' : '#6b7280'} />
+                                </TouchableOpacity>
                             </View>
                         </View>
                         {filteredRecent.length === 0 ? (
@@ -374,6 +446,40 @@ export default function OpsScreen() {
                 </>
             )}
         </ScrollView>
+        <Modal
+            visible={durationMenuOpen}
+            transparent
+            animationType="fade"
+            onRequestClose={() => setDurationMenuOpen(false)}
+        >
+            <Pressable
+                style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', alignItems: 'center' }}
+                onPress={() => setDurationMenuOpen(false)}
+            >
+                <View style={{ backgroundColor: '#1f2937', borderRadius: 12, borderWidth: 1, borderColor: '#374151', minWidth: 200, overflow: 'hidden' }}>
+                    <Text style={{ color: '#9ca3af', fontSize: 11, fontWeight: '600', paddingHorizontal: 16, paddingTop: 12, paddingBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                        Min Duration
+                    </Text>
+                    {(['all', '15m', '1h', '2h', '1d'] as const).map((key) => (
+                        <TouchableOpacity
+                            key={key}
+                            onPress={() => { setMinDurationFilter(key); setDurationMenuOpen(false); }}
+                            style={{
+                                paddingHorizontal: 16,
+                                paddingVertical: 12,
+                                backgroundColor: minDurationFilter === key ? '#374151' : 'transparent',
+                            }}
+                            activeOpacity={0.7}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 14, fontWeight: minDurationFilter === key ? '600' : '400' }}>
+                                {key === 'all' ? 'Any duration' : DURATION_LABELS[key]}
+                            </Text>
+                        </TouchableOpacity>
+                    ))}
+                </View>
+            </Pressable>
+        </Modal>
+        </>
     );
 }
 
