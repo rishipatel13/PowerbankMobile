@@ -30,14 +30,17 @@ export default function MachinesScreen() {
     const [locations, setLocations] = useState<Location[]>([]);
     const [loading, setLoading] = useState(true);
     const [refreshing, setRefreshing] = useState(false);
+    const [error, setError] = useState<string | null>(null);
 
     const fetchLocations = useCallback(async () => {
+        setError(null);
         try {
             const { data, error } = await supabase.from('locations').select('*').order('name');
             if (error) throw error;
             setLocations(data || []);
-        } catch (error) {
-            console.error('Error fetching locations:', error);
+        } catch (err: any) {
+            console.error('Error fetching locations:', err);
+            setError(err?.message || 'Failed to load machines');
         } finally {
             setLoading(false);
             setRefreshing(false);
@@ -105,6 +108,24 @@ export default function MachinesScreen() {
             <View style={styles.loadingContainer}>
                 <ActivityIndicator size="large" color="#60a5fa" />
                 <Text style={styles.loadingText}>Loading machines...</Text>
+            </View>
+        );
+    }
+
+    if (error) {
+        return (
+            <View style={styles.loadingContainer}>
+                <View style={{ backgroundColor: 'rgba(239,68,68,0.08)', borderWidth: 1, borderColor: 'rgba(239,68,68,0.2)', borderRadius: 16, padding: 28, alignItems: 'center' as const, gap: 10 }}>
+                    <Text style={{ color: '#f87171', fontSize: 18, fontWeight: '700' as const }}>Something went wrong</Text>
+                    <Text style={{ color: '#9ca3af', fontSize: 13, textAlign: 'center' as const }}>{error}</Text>
+                    <TouchableOpacity
+                        onPress={() => fetchLocations()}
+                        activeOpacity={0.7}
+                        style={{ marginTop: 10, paddingHorizontal: 24, paddingVertical: 10, backgroundColor: '#1f2937', borderWidth: 1, borderColor: '#374151', borderRadius: 10 }}
+                    >
+                        <Text style={{ color: '#fff', fontSize: 13, fontWeight: '600' as const }}>Retry</Text>
+                    </TouchableOpacity>
+                </View>
             </View>
         );
     }
